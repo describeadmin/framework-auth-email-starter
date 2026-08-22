@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    本 POM 【不继承 framework-parent】—— 与 framework-cache-redis-starter 同一个理由：
+    插件独立成仓后，它对框架的关系与业务方完全相同，通过 import framework-bom 拿版本仲裁，
+    而不是靠继承拿到一整套构建配置。用同一套姿势消费框架，业务方会遇到的问题
+    就会先在这里暴露。
+
+    代价是下面这些构建配置要自带一份，照抄 framework-cache-redis-starter 的做法：
+      - release=17                产物必须能跑在 Java 17 上（构建用哪个 JDK 不作要求）
+      - enforcer 的 requireJavaVersion  唯一的构建前提：JDK >= 17
+      - surefire 的 UTF-8         中文 Windows 上默认 GBK，断言里的中文会对不上（CLAUDE.md 3.6）
+      - enforcer 的两条 ban       JDBC 驱动、Jackson 3
+    唯独【不带】framework 仓里的 enforce-core-thin —— 本插件的职责就是引入 spring-boot-starter-mail。
+  -->
+
+  <groupId>io.github.describeadmin</groupId>
+  <artifactId>framework-auth-email-starter</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>describeadmin :: framework-auth-email-starter</name>
+  <description>邮箱验证码（无密码）登录插件，实现 AuthProvider，可选提供 email 通知渠道</description>
+  <url>https://github.com/describeadmin/framework-auth-email-starter</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>describeadmin</id>
+      <name>describeadmin</name>
+      <url>https://github.com/describeadmin</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/describeadmin/framework-auth-email-starter.git</connection>
+    <developerConnection>scm:git:git@github.com:describeadmin/framework-auth-email-starter.git</developerConnection>
+    <url>https://github.com/describeadmin/framework-auth-email-starter</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!--
+      与 framework-cache-redis-starter 一致：不对构建 JDK 做版本要求，唯一前提是 JDK >= 17
+      （由 enforcer 的 requireJavaVersion 兜底）。release=17 约束的是产物，与构建 JDK 无关。
+    -->
+    <maven.compiler.release>17</maven.compiler.release>
+    <enforcer.java.version>[17,)</enforcer.java.version>
+
+    <!--
+      ⚠️ 本插件构建所针对的框架版本，必须与
+      FrameworkAuthEmailAutoConfiguration.REQUIRED_FRAMEWORK_VERSION 对得上——
+      那个常量是运行期自检读的，这个属性是构建期解析用的，两者说的是同一件事。
+      CI 的兼容性矩阵靠覆盖本属性来跑：mvn -B test -Ddescribeadmin.version=0.3.0
+      见 docs/registry.md 准入规范第 4、5 条。
+
+      插件自身版本号（上面的 <version>）与它【不联动】。
+    -->
+    <describeadmin.version>0.2.0-SNAPSHOT</describeadmin.version>
+
+    <!-- 邮箱验证码是本插件独有的能力，版本号以 https://repo1.maven.org/maven2/com/icegreen/greenmail-junit5/maven-metadata.xml 为准核实过 -->
+    <greenmail.version>2.1.12</greenmail.version>
+
+    <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
+    <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
+    <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+    <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+    <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+    <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+    <central-publishing-plugin.version>0.11.0</central-publishing-plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!--
+        业务方的姿势：只 import framework-bom，不写任何框架模块的版本号。
+        Spring Boot 的版本仲裁由它传递过来，本插件不再自己 import spring-boot-dependencies。
+      -->
+      <dependency>
+        <groupId>io.github.describeadmin</groupId>
+        <artifactId>framework-bom</artifactId>
+        <version>${describeadmin.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!--
+      framework-security-starter 用 compile：本插件实现的 AuthProvider 就定义在这里，
+      这个接口必须保证运行时存在——不存在"只要邮箱验证码、不要框架鉴权"这种场景。
+    -->
+    <dependency>
+      <groupId>io.github.describeadmin</groupId>
+      <artifactId>framework-security-starter</artifactId>
+    </dependency>
+
+    <!--
+      framework-system-starter 用 compile：需要 SysUserService.findByEmail() 把邮箱换成
+      userId，以及 AuthUserLoader 把 userId 拼成完整用户（docs/registry.md 准入规范第 10 条
+      第一种路径——凭证已是核心字段，不需要插件自建映射表）。
+    -->
+    <dependency>
+      <groupId>io.github.describeadmin</groupId>
+      <artifactId>framework-system-starter</artifactId>
+    </dependency>
+
+    <!-- 验证码存储、发送限流、防暴力破解计数都落在这里，同 LoginAttemptGuard 的手法 -->
+    <dependency>
+      <groupId>io.github.describeadmin</groupId>
+      <artifactId>framework-cache-starter</artifactId>
+    </dependency>
+
+    <!-- 可选的 EmailNotifyChannel 复用同一个 JavaMailSender，供其他场景发邮件通知 -->
+    <dependency>
+      <groupId>io.github.describeadmin</groupId>
+      <artifactId>framework-notify-starter</artifactId>
+    </dependency>
+
+    <!--
+      本插件存在的意义就是"用邮箱发验证码登录"，SMTP 发信能力因此是 compile 而非 optional——
+      这正是把它做成插件而不是塞进核心的理由（CLAUDE.md §4.6："引入重量级依赖 → 必须做插件"）。
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!--
+      同仓时期由 framework-parent 的 <dependencies> 提供，独立成仓后必须自己声明——
+      这类"继承来的隐式依赖"是拆仓最容易漏的东西。
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!--
+      测试用真实的假 SMTP 服务器，不 mock JavaMailSender：本插件的价值全在
+      "发出去的是不是一封能被真实 SMTP 协议收到的邮件"，mock 掉 JavaMailSender
+      等于把要验证的部分假设成立了（同 framework-cache-redis-starter 对 Testcontainers 的态度，
+      只是这里换成 GreenMail——它是纯 JVM 内的假 SMTP 实现，不需要 Docker）。
+    -->
+    <dependency>
+      <groupId>com.icegreen</groupId>
+      <artifactId>greenmail</artifactId>
+      <version>${greenmail.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <parameters>true</parameters>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+        <configuration>
+          <!-- 测试 JVM 必须显式指定 UTF-8，理由同 CLAUDE.md 3.6 -->
+          <argLine>-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8</argLine>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-rules</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[3.9.0,)</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>${enforcer.java.version}</version>
+                  <message>
+                    构建本插件需要 JDK 17 或更高版本（用 `mvn -v` 查看 Maven 实际使用的 JDK）。
+                  </message>
+                </requireJavaVersion>
+                <bannedDependencies>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>com.mysql:mysql-connector-j</exclude>
+                    <exclude>mysql:mysql-connector-java</exclude>
+                    <exclude>org.mariadb.jdbc:mariadb-java-client</exclude>
+                    <exclude>com.oceanbase:oceanbase-client</exclude>
+                    <exclude>com.dameng:*</exclude>
+                    <exclude>cn.com.kingbase:*</exclude>
+                  </excludes>
+                  <message>
+                    框架与插件均不得依赖任何 JDBC 驱动。驱动由业务方在自己的 pom.xml 中声明。
+                  </message>
+                </bannedDependencies>
+                <bannedDependencies>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>tools.jackson.core:*</exclude>
+                  </excludes>
+                  <message>
+                    本项目锁定 Jackson 2.x（com.fasterxml.jackson.*）。
+                    tools.jackson.* 是 Jackson 3，属于 Spring Boot 4.x 生态。
+                  </message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- 发布 profile，与 framework-cache-redis-starter 保持一致。步骤参照 docs 仓的 RELEASE.md。 -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>${maven-source-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${maven-javadoc-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <doclint>none</doclint>
+              <quiet>true</quiet>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven-gpg-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>${central-publishing-plugin.version}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>false</autoPublish>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>
