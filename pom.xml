@@ -70,7 +70,7 @@
 
       插件自身版本号（上面的 <version>）与它【不联动】。
     -->
-    <describeadmin.version>0.2.0-SNAPSHOT</describeadmin.version>
+    <describeadmin.version>0.2.0</describeadmin.version>
 
     <!-- 邮箱验证码是本插件独有的能力，版本号以 https://repo1.maven.org/maven2/com/icegreen/greenmail-junit5/maven-metadata.xml 为准核实过 -->
     <greenmail.version>2.1.12</greenmail.version>
