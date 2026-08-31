@@ -19,7 +19,7 @@ import java.util.Locale;
  * 邮箱验证码的发送与校验，{@link EmailCodeAuthProvider} 的支撑服务。
  *
  * <p><b>防账号枚举</b>：邮箱不存在时仍返回"成功"（不真正发信），不对外暴露"这个邮箱是否已注册"
- * 这个信道——延续核心 {@code UsernamePasswordAuthProvider} 用 {@code DUMMY_HASH} 抹平
+ * 这个信道——延续核心 {@code UsernamePasswordAuthProvider} 用占位哈希 {@code dummyHash} 抹平
  * 存在性时序差异的同一种安全姿势，只是这里更直接：既然不发信，攻击者连时序差异都观察不到。
  *
  * <p><b>验证码单次有效</b>：验证成功后立即从 {@link CacheProvider} 摘除，防止同一个码被重放。

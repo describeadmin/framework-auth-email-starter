@@ -11,7 +11,7 @@
 <dependency>
   <groupId>io.github.describeadmin</groupId>
   <artifactId>framework-auth-email-starter</artifactId>
-  <version>0.1.0-SNAPSHOT</version> <!-- 未发布到 Central 前需显式版本号，framework-bom 不仲裁插件版本 -->
+  <version>0.2.0</version> <!-- framework-bom 不仲裁插件版本，需显式写版本号 -->
 </dependency>
 <dependency>
   <groupId>org.springframework.boot</groupId>
