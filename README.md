@@ -82,3 +82,14 @@ mvn test
 
 - `EmailCodeServiceTest`/`EmailNotifyChannelTest`：用 [GreenMail](https://greenmail-mail-test.github.io/greenmail/)（纯 JVM 内假 SMTP 服务器，无需 Docker）验证真实的发信/收信链路。
 - `FrameworkAuthEmailAutoConfigurationTest`：验证"不引/未配置 SMTP = 核心默认行为不变"与"配置了 SMTP = 邮箱登录接入且与内置 password 方式共存"两条路径，覆盖 docs/registry.md 准入规范第 8 条。
+
+
+## 相关文档
+
+- 插件准入规范与目录：docs 仓 `registry.md`
+- 编码规范：docs 仓 `CLAUDE.md`（各子仓不再放副本，开发时把本仓与 `docs` 仓并列检出）
+- 发布步骤：docs 仓 `RELEASE.md`——发到 Maven Central 的版本不可撤回、不可覆盖
+
+## License
+
+Apache License 2.0
