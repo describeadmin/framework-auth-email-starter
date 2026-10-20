@@ -54,11 +54,12 @@ public class FrameworkAuthEmailAutoConfiguration {
 
     /**
      * 本插件要求的最低框架版本。手工声明而不是从插件自身版本推导——插件独立成仓后，
-     * 插件版本与框架版本不再有对应关系。用到了 0.2.0 内新增的
+     * 插件版本与框架版本不再有对应关系。1.0.0 是第一个正式版（0.x 按测试版对待，不做兼容）；
+     * 用到的框架契约有
      * {@code AuthUserLoader.loadByUserId()}（框架 F 项已交付）与
      * {@code SysUserService.findByEmail()}/{@code assertMobileEmailAvailable()}。
      */
-    public static final String REQUIRED_FRAMEWORK_VERSION = "0.2.0";
+    public static final String REQUIRED_FRAMEWORK_VERSION = "1.0.0";
 
     public FrameworkAuthEmailAutoConfiguration() {
         // 放在构造函数里：条件都满足、真的要装配本插件时才检查，插件未激活时不因版本

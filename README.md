@@ -3,7 +3,7 @@
 邮箱验证码（无密码）登录插件，实现 `describeadmin` 框架的 `AuthProvider` SPI，
 可选提供 `NotifyChannel(channel="email")` 供其他场景复用同一个发信能力。
 
-适配框架最低版本：**0.2.0**（见 `FrameworkAuthEmailAutoConfiguration.REQUIRED_FRAMEWORK_VERSION`）。
+适配框架最低版本：**1.0.0**（见 `FrameworkAuthEmailAutoConfiguration.REQUIRED_FRAMEWORK_VERSION`）。
 
 ## 引入
 
@@ -11,7 +11,7 @@
 <dependency>
   <groupId>io.github.describeadmin</groupId>
   <artifactId>framework-auth-email-starter</artifactId>
-  <version>0.2.0</version> <!-- framework-bom 不仲裁插件版本，需显式写版本号 -->
+  <version>1.0.0</version> <!-- framework-bom 不仲裁插件版本，需显式写版本号 -->
 </dependency>
 <dependency>
   <groupId>org.springframework.boot</groupId>
