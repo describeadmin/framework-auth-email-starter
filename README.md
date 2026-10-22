@@ -59,6 +59,8 @@
 | `code-length` | `6` | 验证码长度（纯数字） |
 | `code-ttl` | `5m` | 验证码有效期 |
 | `send-interval` | `60s` | 同一邮箱两次发码的最小间隔 |
+| `send-ip-limit` | `10` | 同一来源 IP 在 `send-ip-window` 内最多发码次数，`0` 关闭。挡"换着邮箱发"的邮件轰炸；整个办公网共用一个出口 IP 时按人数调大 |
+| `send-ip-window` | `1h` | IP 维度的固定时间窗。IP 取直连地址，部署在反向代理之后需配 `server.forward-headers-strategy=native` |
 | `max-verify-attempts` | `5` | 同一验证码允许的错误尝试次数 |
 | `from-address` | 空 | 覆盖 `spring.mail.username` 作为 From 头 |
 | `subject` | `登录验证码` | 验证码邮件主题 |

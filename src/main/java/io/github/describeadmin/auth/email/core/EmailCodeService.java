@@ -56,6 +56,17 @@ public class EmailCodeService {
      * <p>不存在的邮箱同样"成功"返回，见类注释的防枚举说明。
      */
     public void sendCode(String email) {
+        sendCode(email, null);
+    }
+
+    /**
+     * 同 {@link #sendCode(String)}，额外按来源 IP 限流（见 {@link EmailCodeSendThrottle}）。
+     *
+     * @param clientIp 来源 IP，取 {@code request.getRemoteAddr()}；为空时只按邮箱限流
+     */
+    public void sendCode(String email, String clientIp) {
+        // IP 维度放在参数校验之前：空邮箱、畸形邮箱同样是一次请求，同样要计数
+        throttle.assertCanSendFrom(clientIp);
         if (!StringUtils.hasText(email)) {
             throw new BizException(ResultCode.BAD_REQUEST, "邮箱不能为空");
         }

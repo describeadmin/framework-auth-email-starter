@@ -1,6 +1,7 @@
 package io.github.describeadmin.auth.email.core;
 
 import io.github.describeadmin.common.api.Result;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,8 +45,9 @@ public class EmailCodeController {
      * "这个邮箱是否已注册"这个信道，见 {@link EmailCodeService} 类注释。
      */
     @PostMapping("/code")
-    public Result<Void> sendCode(@RequestBody Map<String, String> body) {
-        codeService.sendCode(body.get("email"));
+    public Result<Void> sendCode(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        // 限流只认直连地址，不信任 X-Forwarded-For（客户端可随意伪造）
+        codeService.sendCode(body.get("email"), request.getRemoteAddr());
         return Result.ok();
     }
 }

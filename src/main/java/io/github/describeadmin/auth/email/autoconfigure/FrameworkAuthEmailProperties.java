@@ -31,6 +31,17 @@ public class FrameworkAuthEmailProperties {
     /** 同一邮箱两次发码的最小间隔，防止被刷。 */
     private Duration sendInterval = Duration.ofSeconds(60);
 
+    /**
+     * 同一来源 IP 在 {@link #sendIpWindow} 内最多发码的次数，{@code 0} 关闭 IP 维度。
+     *
+     * <p>只按邮箱限流挡不住"换着邮箱发"的邮件轰炸——每个邮箱只发一次，邮箱维度永远不触发。
+     * 整个办公网共用一个出口 IP 时按人数调大。
+     */
+    private int sendIpLimit = 10;
+
+    /** IP 维度的固定时间窗：从窗口内第一次发码开始计时，到点整体清零。 */
+    private Duration sendIpWindow = Duration.ofHours(1);
+
     /** 同一个验证码允许的错误尝试次数，超过后即便验证码本身仍在有效期内也直接拒绝。 */
     private int maxVerifyAttempts = 5;
 
@@ -77,6 +88,22 @@ public class FrameworkAuthEmailProperties {
 
     public void setSendInterval(Duration sendInterval) {
         this.sendInterval = sendInterval;
+    }
+
+    public int getSendIpLimit() {
+        return sendIpLimit;
+    }
+
+    public void setSendIpLimit(int sendIpLimit) {
+        this.sendIpLimit = sendIpLimit;
+    }
+
+    public Duration getSendIpWindow() {
+        return sendIpWindow;
+    }
+
+    public void setSendIpWindow(Duration sendIpWindow) {
+        this.sendIpWindow = sendIpWindow;
     }
 
     public int getMaxVerifyAttempts() {

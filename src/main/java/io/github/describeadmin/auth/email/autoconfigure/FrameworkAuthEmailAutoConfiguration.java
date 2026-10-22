@@ -70,7 +70,8 @@ public class FrameworkAuthEmailAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(EmailCodeSendThrottle.class)
     public EmailCodeSendThrottle emailCodeSendThrottle(CacheProvider cache, FrameworkAuthEmailProperties properties) {
-        return new EmailCodeSendThrottle(cache, properties.getSendInterval());
+        return new EmailCodeSendThrottle(cache, properties.getSendInterval(),
+                properties.getSendIpLimit(), properties.getSendIpWindow());
     }
 
     @Bean

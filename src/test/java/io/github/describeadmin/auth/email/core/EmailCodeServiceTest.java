@@ -116,6 +116,52 @@ class EmailCodeServiceTest extends AbstractGreenMailTest {
     }
 
     @Test
+    @DisplayName("同一 IP 换着邮箱发：超过 IP 上限即拒绝，不再发信；别的 IP 不受影响")
+    void sendCodeIsThrottledPerIp() {
+        EmailCodeSendThrottle throttle = new EmailCodeSendThrottle(cache, Duration.ofSeconds(60), 2, Duration.ofHours(1));
+        EmailCodeService ipLimited = new EmailCodeService(cache, userService, mailSender(), throttle,
+                new EmailCodeVerifyGuard(cache, 3, Duration.ofMinutes(5)), properties);
+        registerUser("a@example.com", 1L);
+        registerUser("b@example.com", 2L);
+        registerUser("c@example.com", 3L);
+        registerUser("d@example.com", 4L);
+
+        ipLimited.sendCode("a@example.com", "10.0.0.1");
+        ipLimited.sendCode("b@example.com", "10.0.0.1");
+
+        assertThatThrownBy(() -> ipLimited.sendCode("c@example.com", "10.0.0.1"))
+                .isInstanceOf(BizException.class)
+                .hasMessage("发送过于频繁，请稍后再试");
+        assertThat(receivedMessages()).hasSize(2);
+
+        ipLimited.sendCode("d@example.com", "10.0.0.2");
+        assertThat(receivedMessages()).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("IP 维度对未注册邮箱同样计数，否则能借\"未注册不发信\"绕过")
+    void ipThrottleCountsUnregisteredEmails() {
+        EmailCodeSendThrottle throttle = new EmailCodeSendThrottle(cache, Duration.ofSeconds(60), 1, Duration.ofHours(1));
+        EmailCodeService ipLimited = new EmailCodeService(cache, userService, mailSender(), throttle,
+                new EmailCodeVerifyGuard(cache, 3, Duration.ofMinutes(5)), properties);
+
+        ipLimited.sendCode("ghost-1@example.com", "10.0.0.9");
+        assertThatThrownBy(() -> ipLimited.sendCode("ghost-2@example.com", "10.0.0.9"))
+                .isInstanceOf(BizException.class);
+    }
+
+    @Test
+    @DisplayName("IP 上限为 0 表示关闭 IP 维度；启用时时间窗必须为正数")
+    void ipDimensionCanBeDisabled() {
+        EmailCodeSendThrottle disabled = new EmailCodeSendThrottle(cache, Duration.ofSeconds(60), 0, null);
+        for (int i = 0; i < 20; i++) {
+            disabled.assertCanSendFrom("10.0.0.3");
+        }
+        assertThatThrownBy(() -> new EmailCodeSendThrottle(cache, Duration.ofSeconds(60), 5, Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("空邮箱直接拒绝")
     void rejectsBlankEmail() {
         assertThatThrownBy(() -> service.sendCode("")).isInstanceOf(BizException.class);

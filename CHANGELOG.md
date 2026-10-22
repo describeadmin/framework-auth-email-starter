@@ -16,7 +16,7 @@
 
 **框架要求：1.0.0 及以上**
 
-功能与 0.2.0 相同，已针对 framework 1.0.0 重新验证。
+已针对 framework 1.0.0 重新验证。
 
 ### Breaking Changes
 
@@ -26,7 +26,11 @@
 
 ### New Features
 
-无。
+- **发码按来源 IP 限流**：`describeadmin.auth.email.send-ip-limit`（默认 10）/ `send-ip-window`
+  （默认 1h），`send-ip-limit=0` 关闭。此前只按邮箱限流（同一邮箱 60s 一次），发码端点又免登录，
+  换着邮箱发时每个邮箱都只发一次、限流永远不触发——等于借本系统的 SMTP 账号对任意邮箱做邮件轰炸。
+  IP 只取直连地址，不信任 `X-Forwarded-For`；对未注册邮箱的请求同样计数。
+  `EmailCodeService.sendCode(email)` 保留，新增 `sendCode(email, clientIp)`。
 
 ### Bug Fixes
 
