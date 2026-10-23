@@ -9,6 +9,7 @@ import io.github.describeadmin.auth.email.core.EmailNotifyChannel;
 import io.github.describeadmin.cache.api.CacheProvider;
 import io.github.describeadmin.common.api.FrameworkVersion;
 import io.github.describeadmin.security.api.AuthUserLoader;
+import io.github.describeadmin.security.api.PermitAllContributor;
 import io.github.describeadmin.security.autoconfigure.FrameworkSecurityAutoConfiguration;
 import io.github.describeadmin.system.autoconfigure.FrameworkSystemAutoConfiguration;
 import io.github.describeadmin.system.service.SysUserService;
@@ -23,6 +24,8 @@ import org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.mail.javamail.JavaMailSender;
+
+import java.util.List;
 
 /**
  * framework-auth-email-starter 的自动配置。
@@ -118,6 +121,18 @@ public class FrameworkAuthEmailAutoConfiguration {
     }
 
     /**
+     * 发码端点免登录：登录前才需要发码。条件与 {@link #emailCodeController} 相同，端点不存在时不放行这条路径。
+     *
+     * <p>路径不能写进 security-starter 的内置白名单（核心不该知道有本插件），也不该要求业务方手工配
+     * {@code describeadmin.security.permit-all}——漏配的症状是直接 401，报错不指向这一步。
+     */
+    @Bean
+    @ConditionalOnBean(EmailCodeService.class)
+    public PermitAllContributor emailCodePermitAll() {
+        return () -> List.of(EmailCodeController.SEND_CODE_PATH);
+    }
+
+    /**
      * 可选的 email 通知渠道。默认随本插件一起启用（{@code notify-channel.enabled} 默认 true），
      * 可用 {@code describeadmin.auth.email.notify-channel.enabled=false} 单独关掉，
      * 不影响邮箱验证码登录本身。
@@ -133,7 +148,7 @@ public class FrameworkAuthEmailAutoConfiguration {
     /**
      * 诊断性 Bean：插件已启用但检测不到 {@code JavaMailSender} 时打印告警，而不是
      * 静默地什么都不做——不然的话"引了插件却拿不到邮箱登录"这类问题会毫无线索，
-     * 与 docs/registry.md 准入规范第 3 条描述的"引了却没生效，启动毫无异常"是同一类风险，
+     * 与 docs/site/dev/plugin-dev.md 第 3 条描述的"引了却没生效，启动毫无异常"是同一类风险，
      * 只是这次的成因是业务方忘了配置 {@code spring.mail.host}，而不是装配顺序。
      */
     @Bean

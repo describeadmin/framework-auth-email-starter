@@ -16,21 +16,16 @@ import java.util.Map;
  * （限流策略、SMTP 细节），CLAUDE.md §4.2 "框架核心代码里不允许出现任何具体实现的名字"——
  * 即便"邮箱"本身不算厂商名，核心也不该为这一种登录方式的专属动作开洞。
  *
- * <p><b>必须由业务方自行加入白名单</b>：本端点需要在未登录状态下调用（登录前才需要发码），
- * 但核心的 {@code FrameworkSecurityAutoConfiguration.BUILT_IN_PERMIT_ALL} 是框架内置列表，
- * 不允许出现插件专属路径——这是分层的硬边界，核心不知道有本插件存在。业务方需要在
- * {@code application.yml} 里追加：
- * <pre>
- * describeadmin:
- *   security:
- *     permit-all:
- *       - /api/auth/email/code
- * </pre>
- * 不追加会直接收到 401，且报错信息不会指向这一步——本插件的 README 必须提醒这一点。
+ * <p>本端点要在未登录状态下调用（登录前才需要发码）。免登录由插件注册的
+ * {@code PermitAllContributor} 贡献，见 {@code FrameworkAuthEmailAutoConfiguration#emailCodePermitAll}；
+ * 不写进核心的 {@code BUILT_IN_PERMIT_ALL}，核心不知道有本插件存在。
  */
 @RestController
 @RequestMapping("/api/auth/email")
 public class EmailCodeController {
+
+    /** 发码端点的完整路径，与下方 {@code @RequestMapping} + {@code @PostMapping} 拼出来的一致。 */
+    public static final String SEND_CODE_PATH = "/api/auth/email/code";
 
     private final EmailCodeService codeService;
 

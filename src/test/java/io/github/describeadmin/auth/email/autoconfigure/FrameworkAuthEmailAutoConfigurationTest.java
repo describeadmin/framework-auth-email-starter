@@ -7,15 +7,23 @@ import io.github.describeadmin.auth.email.core.EmailNotifyChannel;
 import io.github.describeadmin.cache.autoconfigure.FrameworkCacheAutoConfiguration;
 import io.github.describeadmin.common.api.FrameworkVersion;
 import io.github.describeadmin.security.api.AuthUserLoader;
+import io.github.describeadmin.security.api.PermitAllContributor;
 import io.github.describeadmin.security.autoconfigure.FrameworkSecurityAutoConfiguration;
 import io.github.describeadmin.security.core.AuthProviderRegistry;
 import io.github.describeadmin.system.mapper.SysUserMapper;
 import io.github.describeadmin.system.service.SysUserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -112,9 +120,47 @@ class FrameworkAuthEmailAutoConfigurationTest {
         runner.withPropertyValues("describeadmin.auth.email.enabled=false").run(context -> {
             assertThat(context).doesNotHaveBean(EmailCodeAuthProvider.class);
             assertThat(context).doesNotHaveBean(EmailCodeService.class);
+            assertThat(permitAllPatterns(context)).doesNotContain(EmailCodeController.SEND_CODE_PATH);
             assertThat(context.getBean(AuthProviderRegistry.class).availableTypes())
                     .containsExactly("password");
         });
+    }
+
+    @Test
+    @DisplayName("发码端点由插件自己贡献进免登录白名单，业务方不用手工配 permit-all")
+    void sendCodeEndpointIsContributedToPermitAll() {
+        runner.run(context -> assertThat(permitAllPatterns(context)).contains("/api/auth/email/code"));
+    }
+
+    @Test
+    @DisplayName("没配 SMTP 时端点不存在，也不放行这条路径")
+    void sendCodePathNotPermittedWithoutMailSender() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        FrameworkCacheAutoConfiguration.class,
+                        FrameworkSecurityAutoConfiguration.class,
+                        FrameworkAuthEmailAutoConfiguration.class))
+                .withBean(AuthUserLoader.class, () -> mock(AuthUserLoader.class))
+                .withBean(SysUserMapper.class, () -> mock(SysUserMapper.class))
+                .withBean(SysUserService.class, () -> mock(SysUserService.class))
+                .run(context -> assertThat(permitAllPatterns(context))
+                        .doesNotContain(EmailCodeController.SEND_CODE_PATH));
+    }
+
+    @Test
+    @DisplayName("SEND_CODE_PATH 与控制器的实际映射一致——改了映射忘了改常量，白名单就放错了路径")
+    void sendCodePathConstantMatchesControllerMapping() throws NoSuchMethodException {
+        String base = EmailCodeController.class.getAnnotation(RequestMapping.class).value()[0];
+        String sub = EmailCodeController.class
+                .getMethod("sendCode", Map.class, HttpServletRequest.class)
+                .getAnnotation(PostMapping.class).value()[0];
+        assertThat(base + sub).isEqualTo(EmailCodeController.SEND_CODE_PATH);
+    }
+
+    private static List<String> permitAllPatterns(ApplicationContext context) {
+        return context.getBeansOfType(PermitAllContributor.class).values().stream()
+                .flatMap(c -> c.patterns().stream())
+                .toList();
     }
 
     @Test

@@ -31,6 +31,9 @@
   换着邮箱发时每个邮箱都只发一次、限流永远不触发——等于借本系统的 SMTP 账号对任意邮箱做邮件轰炸。
   IP 只取直连地址，不信任 `X-Forwarded-For`；对未注册邮箱的请求同样计数。
   `EmailCodeService.sendCode(email)` 保留，新增 `sendCode(email, clientIp)`。
+- **发码端点自动免登录**：插件注册 `PermitAllContributor` 贡献 `/api/auth/email/code`，
+  不再需要业务方手工把它加进 `describeadmin.security.permit-all`（漏配的症状是 401，报错不指向这一步）。
+  已经配过的保留也无妨。没配 SMTP、端点不存在时不贡献这条路径。
 
 ### Bug Fixes
 
