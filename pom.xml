@@ -66,7 +66,7 @@
       FrameworkAuthEmailAutoConfiguration.REQUIRED_FRAMEWORK_VERSION 对得上——
       那个常量是运行期自检读的，这个属性是构建期解析用的，两者说的是同一件事。
       CI 的兼容性矩阵靠覆盖本属性来跑：mvn -B test -Ddescribeadmin.version=0.3.0
-      见 docs/registry.md 准入规范第 4、5 条。
+      见 docs/site/dev/plugin-dev.md 第 4、5 条。
 
       插件自身版本号（上面的 <version>）与它【不联动】。
     -->
@@ -113,7 +113,7 @@
 
     <!--
       framework-system-starter 用 compile：需要 SysUserService.findByEmail() 把邮箱换成
-      userId，以及 AuthUserLoader 把 userId 拼成完整用户（docs/registry.md 准入规范第 10 条
+      userId，以及 AuthUserLoader 把 userId 拼成完整用户（docs/site/dev/plugin-dev.md 第 10 条
       第一种路径——凭证已是核心字段，不需要插件自建映射表）。
     -->
     <dependency>
@@ -258,7 +258,7 @@
   </build>
 
   <profiles>
-    <!-- 发布 profile，与 framework-cache-redis-starter 保持一致。步骤参照 docs 仓的 RELEASE.md。 -->
+    <!-- 发布 profile，与 framework-cache-redis-starter 保持一致。步骤参照 docs/site/dev/release.md。 -->
     <profile>
       <id>release</id>
       <build>

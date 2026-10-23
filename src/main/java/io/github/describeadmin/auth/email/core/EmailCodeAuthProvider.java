@@ -13,7 +13,7 @@ import io.github.describeadmin.system.service.SysUserService;
 /**
  * 邮箱验证码（无密码）登录。
  *
- * <p>取 userId 的路径命中 docs/registry.md 准入规范第 10 条第一种情形——凭证（邮箱）
+ * <p>取 userId 的路径命中 docs/site/dev/plugin-dev.md 第 10 条第一种情形——凭证（邮箱）
  * 已经是核心 {@code sys_user} 的常规字段：直接注入 {@link SysUserService} 查
  * {@code findByEmail}，拿到 userId 后调核心 {@link AuthUserLoader#loadByUserId}
  * 拼出角色/权限/数据权限/首页路径俱全的 {@link AuthUser}，本插件不需要、也不应该

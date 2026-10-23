@@ -1,9 +1,8 @@
 # framework-auth-email-starter
 
-邮箱验证码（无密码）登录插件，实现 `describeadmin` 框架的 `AuthProvider` SPI，
-可选提供 `NotifyChannel(channel="email")` 供其他场景复用同一个发信能力。
+describeadmin 的可选插件。邮箱验证码登录：实现框架的 `AuthProvider`，登录页自动出现「邮箱登录」入口；可选提供 `email` 消息通道。
 
-适配框架最低版本：**1.0.0**（见 `FrameworkAuthEmailAutoConfiguration.REQUIRED_FRAMEWORK_VERSION`）。
+**文档：[https://describeadmin.github.io/docs/how-to/auth-email](https://describeadmin.github.io/docs/how-to/auth-email)**，全部配置项见 [插件配置](https://describeadmin.github.io/docs/reference/configuration/plugins)。
 
 ## 引入
 
@@ -11,87 +10,52 @@
 <dependency>
   <groupId>io.github.describeadmin</groupId>
   <artifactId>framework-auth-email-starter</artifactId>
-  <version>1.0.0</version> <!-- framework-bom 不仲裁插件版本，需显式写版本号 -->
-</dependency>
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-mail</artifactId>
+  <version>1.0.0</version>
 </dependency>
 ```
 
-## 必须配置的两件事
+版本号要显式写：`framework-bom` 不管插件的版本，插件有自己的版本线。
 
-1. **SMTP 参数**（Spring Boot 原生 `spring.mail.*`，本插件不重新定义）：
+另外引入 `org.springframework.boot:spring-boot-starter-mail`（版本由 Spring Boot 管理）。SMTP 用 Spring Boot 的标准配置：
 
-   ```yaml
-   spring:
-     mail:
-       host: smtp.example.com
-       port: 465
-       username: no-reply@example.com
-       password: ${SMTP_PASSWORD}
-       properties:
-         mail:
-           smtp:
-             auth: true
-             ssl:
-               enable: true
-   ```
+```yaml
+spring:
+  mail:
+    host: smtp.example.gov.cn
+    port: 465
+    username: no-reply@example.gov.cn
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+```
 
-   本地开发建议用 [MailHog](https://github.com/mailhog/MailHog)（`docker run -p 1025:1025 -p 8025:8025 mailhog/mailhog`，
-   `spring.mail.host=localhost`、`port=1025`、`smtp.auth=false`），有 Web UI 直接肉眼查看发出的验证码邮件。
+前端不用改：登录页按 `/api/auth/providers` 的返回决定是否显示邮箱登录。
 
-2. **把发验证码端点加进白名单**——核心的 `FrameworkSecurityAutoConfiguration.BUILT_IN_PERMIT_ALL`
-   不包含插件路径（分层硬边界），不加会直接 401 且报错不会指向这里：
+运行时开关是 `describeadmin.auth.email.enabled`（默认 `true`），关掉后与没有引入这个 jar 完全一样。
 
-   ```yaml
-   describeadmin:
-     security:
-       permit-all:
-         - /api/auth/email/code
-   ```
+## 兼容性
 
-## 配置项（前缀 `describeadmin.auth.email`）
+| 插件版本 | 最低框架版本 |
+|---|---|
+| 1.0.0 | 1.0.0 |
 
-| 配置项 | 默认值 | 说明 |
-|---|---|---|
-| `enabled` | `true` | 运行时开关，关闭后等同于未引入本插件 |
-| `code-length` | `6` | 验证码长度（纯数字） |
-| `code-ttl` | `5m` | 验证码有效期 |
-| `send-interval` | `60s` | 同一邮箱两次发码的最小间隔 |
-| `send-ip-limit` | `10` | 同一来源 IP 在 `send-ip-window` 内最多发码次数，`0` 关闭。挡"换着邮箱发"的邮件轰炸；整个办公网共用一个出口 IP 时按人数调大 |
-| `send-ip-window` | `1h` | IP 维度的固定时间窗。IP 取直连地址，部署在反向代理之后需配 `server.forward-headers-strategy=native` |
-| `max-verify-attempts` | `5` | 同一验证码允许的错误尝试次数 |
-| `from-address` | 空 | 覆盖 `spring.mail.username` 作为 From 头 |
-| `subject` | `登录验证码` | 验证码邮件主题 |
-| `notify-channel.enabled` | `true` | 是否额外注册 `NotifyChannel(channel="email")` |
+插件启动时检查框架版本：框架比上表要求的旧、或主版本不同（0.x 与 1.x 不互通），应用直接拒绝启动并说明原因。
+CI 对表里的每个框架版本各跑一遍完整测试。版本对应关系的总表见 [插件目录](https://describeadmin.github.io/docs/reference/plugins)。
 
-## 端点
-
-- `POST /api/auth/email/code` — 发送验证码，body: `{"email": "..."}`；无论邮箱是否已注册都返回成功（防账号枚举）。
-- `POST /api/auth/login` — 沿用核心端点，body: `{"type": "email", "email": "...", "code": "..."}`。
-
-## 未注册邮箱与账号枚举
-
-发码接口不区分"邮箱是否已注册"：未注册邮箱同样返回成功，但不会真正投递邮件。
-这与核心 `UsernamePasswordAuthProvider` 不区分"用户不存在"与"密码错误"是同一种安全姿势。
-
-## 测试
+## 开发
 
 ```bash
-mvn test
+mvn clean test          # 用 GreenMail（JVM 内的 SMTP 服务器）验证真实收发信，不需要 Docker
+mvn clean test -Ddescribeadmin.version=1.0.0
 ```
 
-- `EmailCodeServiceTest`/`EmailNotifyChannelTest`：用 [GreenMail](https://greenmail-mail-test.github.io/greenmail/)（纯 JVM 内假 SMTP 服务器，无需 Docker）验证真实的发信/收信链路。
-- `FrameworkAuthEmailAutoConfigurationTest`：验证"不引/未配置 SMTP = 核心默认行为不变"与"配置了 SMTP = 邮箱登录接入且与内置 password 方式共存"两条路径，覆盖 docs/registry.md 准入规范第 8 条。
+构建只要求 JDK ≥ 17（enforcer 把关，产物固定为 Java 17 字节码）；用 `mvn -v` 看 Maven 实际用的 JDK。
+框架有尚未发布到 Central 的版本时，先 `mvn -f ../framework/pom.xml clean install -DskipTests -Dgpg.skip=true` 装到本地仓库。
 
+本插件不继承 `framework-parent`，而是 import `framework-bom`，与业务方的用法相同。插件开发规范见
+[编写插件](https://describeadmin.github.io/docs/dev/plugin-dev)，发布照 [发布手册](https://describeadmin.github.io/docs/dev/release) 执行。
 
-## 相关文档
+## 变更记录与许可证
 
-- 插件准入规范与目录：docs 仓 `registry.md`
-- 编码规范：docs 仓 `CLAUDE.md`（各子仓不再放副本，开发时把本仓与 `docs` 仓并列检出）
-- 发布步骤：docs 仓 `RELEASE.md`——发到 Maven Central 的版本不可撤回、不可覆盖
-
-## License
-
-Apache License 2.0
+[CHANGELOG.md](./CHANGELOG.md) · [Apache-2.0](./LICENSE)
