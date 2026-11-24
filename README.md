@@ -1,6 +1,9 @@
 # framework-auth-email-starter
 
-![Describe Admin](./assets/logo-text.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/logo-text.svg">
+  <img alt="Describe Admin" src="./assets/logo-text-light.svg">
+</picture>
 
 describeadmin 的可选插件。邮箱验证码登录：实现框架的 `AuthProvider`，登录页自动出现「邮箱登录」入口；可选提供 `email` 消息通道。
 
