@@ -1,5 +1,7 @@
 # framework-auth-email-starter
 
+![Describe Admin](./assets/logo-text.svg)
+
 describeadmin 的可选插件。邮箱验证码登录：实现框架的 `AuthProvider`，登录页自动出现「邮箱登录」入口；可选提供 `email` 消息通道。
 
 **文档：[https://describeadmin.github.io/docs/how-to/auth-email](https://describeadmin.github.io/docs/how-to/auth-email)**，全部配置项见 [插件配置](https://describeadmin.github.io/docs/reference/configuration/plugins)。
